@@ -239,7 +239,12 @@ aside.det{position:sticky;top:calc(env(safe-area-inset-top,0px) + 112px);max-hei
   </div>
 </header>
 
-<main class="wrap"><section class="card" style="grid-column:1/-1;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><b style="margin-right:6px">Documentos para descargar:</b><a class="btn" style="text-decoration:none;color:inherit" data-doc="Minuta_Respuesta_Obs_Pavimentacion_RevA.docx" href="Minuta_Respuesta_Obs_Pavimentacion_RevA.docx?v=202611191642" download>Minuta de respuesta a observaciones <small>(Word · 48 KB)</small></a><a class="btn" style="text-decoration:none;color:inherit" data-doc="Ppto_Plazoleta_Arica_RevA.xlsx" href="Ppto_Plazoleta_Arica_RevA.xlsx?v=202611191642" download>Presupuesto con APU <small>(Excel · 26 KB)</small></a></section>
+<main class="wrap"><section class="card" style="grid-column:1/-1;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;border:2px solid var(--accent)"><div style="flex-basis:100%;margin-bottom:2px"><b style="font-size:17px">Descargue aquí los documentos del presupuesto</b><div style="font-size:12.5px;color:var(--muted)" id="doc-nota">Abajo puede revisar cada partida con su análisis de precios unitarios (botón +).</div></div><a class="btn primary" style="text-decoration:none;font-size:15px;padding:9px 16px" data-doc="Minuta_Respuesta_Obs_Pavimentacion_RevA.docx" href="Minuta_Respuesta_Obs_Pavimentacion_RevA.docx?v=202611191659" download>Minuta de respuesta a observaciones <small>(Word · 48 KB)</small></a><a class="btn primary" style="text-decoration:none;font-size:15px;padding:9px 16px" data-doc="Ppto_Plazoleta_Arica_RevA.xlsx" href="Ppto_Plazoleta_Arica_RevA.xlsx?v=202611191659" download>Presupuesto con APU <small>(Excel · 26 KB)</small></a></section><script>(function(){var ok=!!window.showSaveFilePicker;var n=document.getElementById('doc-nota');
+if(n&&ok)n.textContent+=' Al descargar se le preguntará en qué carpeta guardarlo.';
+window.addEventListener('load',function(){document.querySelectorAll('a[data-doc]').forEach(function(a){a.addEventListener('click',async function(ev){
+ if(ev.defaultPrevented||!ok)return;ev.preventDefault();
+ try{var h=await showSaveFilePicker({suggestedName:a.dataset.doc});var r=await fetch(a.getAttribute('href'),{cache:'no-store'});var w=await h.createWritable();await w.write(await r.blob());await w.close();}
+ catch(e){if(e&&e.name!=='AbortError'){location.href=a.getAttribute('href');}}});});});})();</script>
   <section class="card" aria-label="Presupuesto">
     <details class="proj" id="proj"><summary>Datos del proyecto <small id="proj-sum">cargando…</small></summary><div class="proj-body" id="proj-body"></div></details>
     <div class="tbl-wrap">
@@ -892,7 +897,7 @@ $("#b-xls").onclick=async()=>{
 
 /* ---------- carga ---------- */
 async function boot(){
-  if(window.__SNAP){ const N=window.__SNAP; S.db=null; S.canWrite=!N.ro; S.meta=N.meta; paintRev(); if(N.ro){ $("#b-new").hidden=true; }
+  if(window.__SNAP){ const N=window.__SNAP; S.db=null; S.canWrite=!N.ro; S.meta=N.meta; paintRev(); if(N.ro){ ["#b-new","#b-xls","#b-prueba","#b-min"].forEach(q=>{ const e=$(q); if(e) e.hidden=true; }); const o=document.querySelector('label[for="ondac-file"]'); if(o) o.hidden=true; }
     if(typeof N.meta.uf==="number"){UI.uf=N.meta.uf; $("#uf-val").value=String(UI.uf).replace(".",",");} if(typeof N.meta.gg==="number"){UI.gg=N.meta.gg; $("#gg-val").value=UI.gg;} loadScen(N.meta); if(typeof N.meta.datos?.plazo_dias==="number"){UI.plazo=N.meta.datos.plazo_dias; $("#plz-val").value=UI.plazo;}
     if(N.meta.nombre) $("#h-title").textContent=N.meta.nombre; if(N.meta.subtitulo||N.fecha) $("#h-sub").textContent=(N.meta.subtitulo||"")+(N.ro?" · versión publicada "+N.fecha:" · copia para revisar ("+N.fecha+")");
     S.items=new Map(N.items.map(x=>[x.id,x])); S.ready=true;
