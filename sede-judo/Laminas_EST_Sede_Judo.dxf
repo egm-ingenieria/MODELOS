@@ -489,7 +489,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461368.567013889
+2461368.590775463
   9
 $TDUCREATE
  40
@@ -497,7 +497,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461368.567060185
+2461368.5908217593
   9
 $TDUUPDATE
  40
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{90397EBA-9373-464F-A33E-11D5BB7582C6}
+{0E7B2050-C9D1-4629-9AAD-120C4808D3E2}
   9
 $VERSIONGUID
   2
-{6D8C804D-79B1-465B-B82F-55130BD8A8B7}
+{BE56799F-ED6E-49A3-804D-D6A8F9FD048A}
   9
 $EXTNAMES
 290
@@ -1323,9 +1323,9 @@ ISM
   0
 CLASS
   1
-LAYOUT
+ACDBPLACEHOLDER
   2
-AcDbLayout
+AcDbPlaceHolder
   3
 ObjectDBX Classes
  90
@@ -1339,9 +1339,9 @@ ObjectDBX Classes
   0
 CLASS
   1
-ACDBPLACEHOLDER
+LAYOUT
   2
-AcDbPlaceHolder
+AcDbLayout
   3
 ObjectDBX Classes
  90
@@ -38559,7 +38559,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -52107,7 +52107,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -83859,7 +83859,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -113195,7 +113195,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -156029,7 +156029,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -179833,7 +179833,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -196239,7 +196239,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -216077,7 +216077,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -238739,7 +238739,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -266629,7 +266629,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -281239,7 +281239,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -740503,7 +740503,7 @@ AcDbText
  40
 2.0
   1
-Generado 23-11-2026 13:36 · código v100
+Generado 23-11-2026 14:10 · código v100
   7
 ROTULO
  72
@@ -751661,7 +751661,7 @@ DictionaryVariables
 280
 0
   1
-1.4.5 @ 2026-11-23T16:36:30.266579+00:00
+1.4.5 @ 2026-11-23T17:10:43.178813+00:00
   0
 VISUALSTYLE
   5
@@ -753909,7 +753909,7 @@ DictionaryVariables
 280
 0
   1
-1.4.5 @ 2026-11-23T16:36:34.783926+00:00
+1.4.5 @ 2026-11-23T17:10:47.810782+00:00
   0
 ENDSEC
   0
