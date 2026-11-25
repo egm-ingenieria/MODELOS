@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor perfil longitudinal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: herramienta de trabajo, sobria, precisa, como la vista de perfil de Civil 3D.
+   IDEA: la lámina de perfil longitudinal con su guitarra.
+   PICTURE: el propio perfil editable, a todo el ancho.
+   COLOUR and TYPE: blanco, tinta negra, gris hormigón, amarillo seguridad solo en lo seleccionado; Hanken Grotesk.
+   LAYOUT: barra de herramientas arriba, perfil + guitarra, debajo tablas de PIV y chequeos. */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#1a1a19);--ink:light-dark(#111,#eee);--mut:light-dark(#6b6b66,#a5a59f);
+--rule:light-dark(#d8d8d4,#3a3a37);--pane:light-dark(#f3f3f0,#232321);--acc:#ffe600;--ras:light-dark(#c4161c,#ff5a5f);
+--bor:light-dark(#1f5fbf,#6aa5ff);--ter:light-dark(#8a8a84,#8f8f88);--ok:light-dark(#1d7a3a,#5fd38a);--bad:light-dark(#c4161c,#ff6b6b)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow-x:clip}
+header{padding:16px max(3vw,14px) 8px;display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline}
+h1{font-size:26px;line-height:1.1;margin:0;font-weight:700}
+h2{font-size:17px;margin:0 0 8px}
+.sub{color:var(--mut)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px max(3vw,14px);border-block:1px solid var(--rule);background:var(--pane);position:sticky;top:0;z-index:5}
+button,select,input{font:inherit;font-size:15px;color:var(--ink)}
+button{min-height:38px;padding:0 12px;border:1px solid var(--rule);background:var(--bg);border-radius:4px;cursor:pointer}
+button:hover{border-color:var(--ink)}button.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+label{display:inline-flex;gap:6px;align-items:center;color:var(--mut);font-size:14px}
+input[type=number]{width:78px;min-height:34px;padding:2px 6px;border:1px solid var(--rule);border-radius:4px;background:var(--bg);text-align:right}
+.sep{width:1px;height:28px;background:var(--rule)}
+.fig{position:relative;height:min(64vh,620px);min-height:420px;margin:0 max(3vw,14px);touch-action:none}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%;user-select:none}
+.help{padding:4px max(3vw,14px);color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));gap:20px;padding:16px max(3vw,14px) 40px}
+.card{border-top:2px solid var(--ink);padding-top:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:4px 6px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--mut)}td:first-child,th:first-child{text-align:left}
+tr.sel td{background:color-mix(in srgb,var(--acc) 45%,transparent)}
+td input{width:124px}
+.okc{color:var(--ok)}.badc{color:var(--bad);font-weight:700}
+textarea{width:100%;min-height:120px;font:12px/1.4 ui-monospace,monospace;border:1px solid var(--rule);border-radius:4px;background:var(--pane);color:var(--ink);padding:6px}
+.scroll{overflow-x:auto}
+.msg{min-height:20px;font-size:13px;color:var(--mut)}
+svg text{font-family:"Hanken Grotesk",system-ui,sans-serif}
+@media(max-width:600px){.fig{min-height:360px}h1{font-size:21px}}
+</style>
+</head>
+<body>
+<header><h1 id="tit">Perfil longitudinal</h1><span class="sub" id="subt"></span></header>
+<div class="bar">
+  <button class="pri" id="bProp" title="Calcula una rasante limpia con pocos PIV a partir de la topografía">Proponer rasante</button>
+  <label>PIV <input type="number" id="nPiv" min="2" max="12" step="1" value="3"></label>
+  <label title="Altura vista de solera (cm) que se descuenta a los puntos SOL B para estimar el borde de calzada">Solera vista cm <input type="number" id="revel" step="1" value="5"></label>
+  <label title="Peso de las tapas de cámara en la propuesta: 0 = no influyen; 10 = la rasante busca pasar por ellas">Peso tapas <input type="number" id="pTapa" min="0" max="50" step="1" value="0"></label>
+  <label title="Peso de los puntos SOL B (los BC pesan 1)">Peso SOL B <input type="number" id="pSol" min="0" max="5" step="0.1" value="0.5"></label>
+  <span class="sep"></span>
+  <label title="Largo máximo de curva vertical que pone la propuesta">L curva m <input type="number" id="lMax" step="5" value="40"></label>
+  <label title="Exageración vertical del dibujo">Exag. V <input type="number" id="exag" step="10" value="0" title="0 = automática"></label>
+  <label><input type="checkbox" id="soloZ" checked> arrastrar solo cota</label>
+  <span class="sep"></span>
+  <button id="bUndo" title="Ctrl+Z">Deshacer</button><button id="bRedo" title="Ctrl+Y">Rehacer</button>
+</div>
+<div class="help">Arrastra los PIV (círculos). Doble clic en el perfil agrega un PIV; tecla Supr lo borra; flechas ↑↓ mueven 1 mm (Mayús: 1 cm). Selecciona un PIV para editar Dm, cota y largo de curva en la tabla.</div>
+<div class="help" id="ley">
+ <span style="color:var(--ras)">━ rasante eje</span> · <span style="color:var(--bor)">╌ borde calzada proyectado (eje − bombeo)</span> ·
+ <span style="color:var(--ter)">━ terreno en el eje (TIN, poco confiable donde no hay puntos)</span> ·
+ <span style="color:var(--bor)">▲ BC (cuneta)</span> · <span style="color:var(--bor)">□ SOL B (solera)</span> · ● tapa cámara en calzada · franja amarilla: lomo de toro existente</div>
+<div class="fig" id="fig"><svg id="svg"></svg></div>
+<div class="grid">
+  <div class="card"><h2>Vértices (PIV)</h2><div class="scroll"><table id="tPiv"></table></div>
+    <p class="msg" id="mPiv"></p></div>
+  <div class="card"><h2>Chequeos</h2><div class="scroll"><table id="tChk"></table></div>
+    <p class="msg">Diferencia = rasante proyectada en el offset del punto − cota del punto. En solera (SOL B) lo esperable es negativo: la altura vista.</p></div>
+  <div class="card"><h2>Guardar / cargar rasante</h2>
+    <p class="sub" style="margin-top:0">Copia el JSON y guárdalo como <b>rasante.json</b> en la carpeta del proyecto; el cálculo de transversales y cubicación lo lee.</p>
+    <textarea id="json" spellcheck="false"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <button id="bCopy">Copiar JSON</button><button id="bDesc">Descargar</button><button id="bLoad">Cargar JSON pegado</button>
+      <label><input type="file" id="fIn" accept=".json"> </label></div>
+    <p class="msg" id="mJson"></p></div>
+</div>
+<script>
+{
+const D = {"nombre": "Calle Nebraska", "largo": 132.973, "bombeo": 0.02, "semiancho": 3.5, "terreno": [[0.5, 1064.077], [1.0, 1064.0637], [1.5, 1064.0652], [2.0, 1064.0661], [2.5, 1064.0749], [3.0, 1064.0638], [3.5, 1064.0615], [4.0, 1064.0616], [4.5, 1064.0626], [5.0, 1064.0635], [5.5, 1064.0645], [6.0, 1064.0655], [6.5, 1064.0664], [7.0, 1064.0674], [7.5, 1064.0683], [8.0, 1064.0695], [8.5, 1064.0686], [9.0, 1064.066], [9.5, 1064.0678], [10.0, 1064.0695], [10.5, 1064.1226], [11.0, 1064.1218], [11.5, 1064.121], [12.0, 1064.12], [12.5, 1064.119], [13.0, 1064.1179], [13.5, 1064.116], [14.0, 1064.1124], [14.5, 1064.1021], [15.0, 1064.0771], [15.5, 1064.0773], [16.0, 1064.0774], [16.5, 1064.0775], [17.0, 1064.0777], [17.5, 1064.0778], [18.0, 1064.0779], [18.5, 1064.0781], [19.0, 1064.0782], [19.5, 1064.0784], [20.0, 1064.0785], [20.5, 1064.0787], [21.0, 1064.0789], [21.5, 1064.079], [22.0, 1064.0792], [22.5, 1064.0794], [23.0, 1064.0796], [23.5, 1064.0797], [24.0, 1064.0799], [24.5, 1064.0801], [25.0, 1064.0803], [25.5, 1064.0804], [26.0, 1064.0806], [26.5, 1064.0808], [27.0, 1064.0844], [27.5, 1064.1038], [28.0, 1064.1231], [28.5, 1064.1424], [29.0, 1064.1618], [29.5, 1064.1812], [30.0, 1064.1789], [30.5, 1064.1625], [31.0, 1064.1461], [31.5, 1064.1297], [32.0, 1064.1183], [32.5, 1064.1279], [33.0, 1064.1276], [33.5, 1064.1273], [34.0, 1064.127], [34.5, 1064.1267], [35.0, 1064.1264], [35.5, 1064.1261], [36.0, 1064.1221], [36.5, 1064.1209], [37.0, 1064.1196], [37.5, 1064.1184], [38.0, 1064.1172], [38.5, 1064.116], [39.0, 1064.1148], [39.5, 1064.1135], [40.0, 1064.1123], [40.5, 1064.1111], [41.0, 1064.1099], [41.5, 1064.1087], [42.0, 1064.1074], [42.5, 1064.1059], [43.0, 1064.1042], [43.5, 1064.1025], [44.0, 1064.1008], [44.5, 1064.099], [45.0, 1064.0973], [45.5, 1064.0956], [46.0, 1064.0939], [46.5, 1064.0922], [47.0, 1064.0905], [47.5, 1064.0888], [48.0, 1064.0871], [48.5, 1064.0853], [49.0, 1064.0836], [49.5, 1064.0819], [50.0, 1064.0802], [50.5, 1064.0785], [51.0, 1064.0768], [51.5, 1064.0751], [52.0, 1064.0734], [52.5, 1064.07], [53.0, 1064.0628], [53.5, 1064.0587], [54.0, 1064.0631], [54.5, 1064.0676], [55.0, 1064.072], [55.5, 1064.0765], [56.0, 1064.081], [56.5, 1064.0854], [57.0, 1064.0899], [57.5, 1064.0944], [58.0, 1064.0988], [58.5, 1064.1033], [59.0, 1064.1078], [59.5, 1064.1122], [60.0, 1064.1167], [60.5, 1064.1189], [61.0, 1064.1149], [61.5, 1064.1109], [62.0, 1064.1069], [62.5, 1064.1029], [63.0, 1064.0989], [63.5, 1064.0945], [64.0, 1064.0901], [64.5, 1064.0856], [65.0, 1064.0812], [65.5, 1064.0768], [66.0, 1064.0723], [66.5, 1064.0703], [67.0, 1064.0703], [67.5, 1064.0703], [68.0, 1064.0703], [68.5, 1064.0703], [69.0, 1064.0703], [69.5, 1064.0703], [70.0, 1064.0703], [70.5, 1064.0703], [71.0, 1064.0542], [71.5, 1064.0569], [72.0, 1064.0595], [72.5, 1064.0621], [73.0, 1064.0647], [73.5, 1064.0671], [74.0, 1064.0694], [74.5, 1064.0717], [75.0, 1064.074], [75.5, 1064.0763], [76.0, 1064.0785], [76.5, 1064.0808], [77.0, 1064.0831], [77.5, 1064.0854], [78.0, 1064.0877], [78.5, 1064.09], [79.0, 1064.0923], [79.5, 1064.0946], [80.0, 1064.0969], [80.5, 1064.0992], [81.0, 1064.1015], [81.5, 1064.1038], [82.0, 1064.1061], [82.5, 1064.1084], [83.0, 1064.1102], [83.5, 1064.1106], [84.0, 1064.111], [84.5, 1064.1114], [85.0, 1064.1285], [85.5, 1064.1489], [86.0, 1064.1693], [86.5, 1064.1897], [87.0, 1064.1943], [87.5, 1064.1927], [88.0, 1064.1288], [88.5, 1064.1238], [89.0, 1064.1188], [89.5, 1064.1138], [90.0, 1064.1088], [90.5, 1064.1038], [91.0, 1064.0988], [91.5, 1064.0954], [92.0, 1064.092], [92.5, 1064.0885], [93.0, 1064.0851], [93.5, 1064.0817], [94.0, 1064.0791], [94.5, 1064.0772], [95.0, 1064.0753], [95.5, 1064.0733], [96.0, 1064.0714], [96.5, 1064.0695], [97.0, 1064.0675], [97.5, 1064.0656], [98.0, 1064.0739], [98.5, 1064.0915], [99.0, 1064.1086], [99.5, 1064.1258], [100.0, 1064.143], [100.5, 1064.1602], [101.0, 1064.1773], [101.5, 1064.1779], [102.0, 1064.175], [102.5, 1064.1722], [103.0, 1064.1693], [103.5, 1064.1665], [104.0, 1064.1636], [104.5, 1064.1608], [105.0, 1064.1579], [105.5, 1064.1551], [106.0, 1064.1484], [106.5, 1064.1323], [107.0, 1064.1161], [107.5, 1064.1], [108.0, 1064.0838], [108.5, 1064.0677], [109.0, 1064.0516], [109.5, 1064.0393], [110.0, 1064.036], [110.5, 1064.0327], [111.0, 1064.0294], [111.5, 1064.0261], [112.0, 1064.0229], [112.5, 1064.0196], [113.0, 1064.0163], [113.5, 1064.013], [114.0, 1064.0115], [114.5, 1064.0099], [115.0, 1064.0084], [115.5, 1064.0069], [116.0, 1064.0053], [116.5, 1064.0038], [117.0, 1064.0023], [117.5, 1064.0261], [118.0, 1064.0616], [118.5, 1064.0972], [119.0, 1064.1306], [119.5, 1064.1387], [120.0, 1064.1468], [120.5, 1064.1549], [121.0, 1064.1314], [121.5, 1064.0945], [122.0, 1064.0575], [122.5, 1064.0206], [123.0, 1064.0212], [123.5, 1064.0378], [124.0, 1064.0424], [124.5, 1064.0449], [125.0, 1064.0474], [125.5, 1064.048], [126.0, 1064.0456], [126.5, 1064.0432], [127.0, 1064.0409], [127.5, 1064.0269], [128.0, 1064.0111], [128.5, 1064.0149]], "puntos": [{"t": "POSTE", "n": "5", "s": 128.286, "o": 4.397, "z": 1064.092}, {"t": "POSTE", "n": "7", "s": 117.425, "o": 4.257, "z": 1064.175}, {"t": "VEREDA", "n": "20", "s": 92.571, "o": 6.494, "z": 1064.082}, {"t": "CERCO", "n": "21", "s": 92.602, "o": 6.395, "z": 1064.074}, {"t": "CERCO", "n": "22", "s": 92.552, "o": 3.779, "z": 1064.118}, {"t": "CERCO", "n": "23", "s": 88.011, "o": 3.962, "z": 1064.107}, {"t": "RADIER", "n": "24", "s": 87.964, "o": 3.953, "z": 1064.206}, {"t": "POSTE", "n": "25", "s": 85.857, "o": 3.975, "z": 1064.213}, {"t": "POSTE", "n": "33", "s": 53.797, "o": 3.98, "z": 1064.229}, {"t": "ARBOL", "n": "39", "s": 55.163, "o": 4.13, "z": 1064.24}, {"t": "ARBOL", "n": "40", "s": 53.079, "o": 4.091, "z": 1064.224}, {"t": "ARBOL", "n": "41", "s": 52.169, "o": 3.963, "z": 1064.202}, {"t": "ARBOL", "n": "42", "s": 51.239, "o": 3.923, "z": 1064.203}, {"t": "LTORO", "n": "43", "s": 52.254, "o": 3.501, "z": 1064.084}, {"t": "LTORO", "n": "44", "s": 53.251, "o": 3.5, "z": 1064.069}, {"t": "LTORO", "n": "45", "s": 53.291, "o": 0.06, "z": 1064.057}, {"t": "LTORO", "n": "46", "s": 52.255, "o": 0.056, "z": 1064.072}, {"t": "RADIER", "n": "50", "s": 29.262, "o": 5.86, "z": 1064.118}, {"t": "RADIER", "n": "51", "s": 29.174, "o": 3.624, "z": 1064.093}, {"t": "SOL B", "n": "52", "s": 28.89, "o": 3.5, "z": 1064.102}, {"t": "POSTE", "n": "53", "s": 27.77, "o": 3.98, "z": 1064.176}, {"t": "RADIER", "n": "54", "s": 24.493, "o": 6.472, "z": 1064.219}, {"t": "RADIER", "n": "55", "s": 24.398, "o": 3.633, "z": 1064.204}, {"t": "SOL B", "n": "56", "s": 19.065, "o": 3.5, "z": 1064.081}, {"t": "TENSOR", "n": "57", "s": 22.529, "o": 4.223, "z": 1064.238}, {"t": "SOL B", "n": "58", "s": 12.968, "o": 3.5, "z": 1064.094}, {"t": "BC", "n": "59", "s": 11.875, "o": 3.5, "z": 1064.084}, {"t": "POSTE", "n": "60", "s": 11.033, "o": 3.945, "z": 1064.246}, {"t": "SOL B", "n": "61", "s": 4.797, "o": 3.5, "z": 1064.087}, {"t": "SOL B", "n": "62", "s": 2.68, "o": 3.55, "z": 1064.1}, {"t": "SOL B", "n": "63", "s": 1.772, "o": 3.761, "z": 1064.104}, {"t": "BC", "n": "64", "s": 1.316, "o": 3.983, "z": 1064.118}, {"t": "BC", "n": "65", "s": 0.591, "o": 4.637, "z": 1064.124}, {"t": "SOL B", "n": "66", "s": 0.298, "o": 5.1, "z": 1064.111}, {"t": "CAMARA", "n": "67", "s": 8.489, "o": 0.698, "z": 1064.075}, {"t": "CAMARA", "n": "68", "s": 8.832, "o": 0.606, "z": 1064.068}, {"t": "ACCESO", "n": "69", "s": 80.021, "o": 3.713, "z": 1064.079}, {"t": "ACCESO", "n": "70", "s": 82.943, "o": 3.668, "z": 1064.137}, {"t": "CA.LL", "n": "72", "s": 129.663, "o": 3.019, "z": 1064.033}, {"t": "CA.LL", "n": "73", "s": 128.686, "o": 3.013, "z": 1064.061}, {"t": "SOL B", "n": "82", "s": 132.886, "o": 6.161, "z": 1064.102}, {"t": "SOL B", "n": "83", "s": 132.724, "o": 5.194, "z": 1064.092}, {"t": "SOL B", "n": "84", "s": 132.341, "o": 4.514, "z": 1064.062}, {"t": "SOL B", "n": "85", "s": 131.654, "o": 3.942, "z": 1064.046}, {"t": "SOL B", "n": "86", "s": 130.945, "o": 3.635, "z": 1064.048}, {"t": "BC", "n": "87", "s": 130.328, "o": 3.526, "z": 1064.058}, {"t": "BC", "n": "88", "s": 129.787, "o": 3.5, "z": 1064.085}, {"t": "SOL B", "n": "89", "s": 131.89, "o": 4.121, "z": 1064.065}, {"t": "GRIFO", "n": "90", "s": 130.109, "o": 4.958, "z": 1064.105}, {"t": "GRIFO", "n": "91", "s": 129.727, "o": 4.869, "z": 1064.102}, {"t": "CAMARA", "n": "93", "s": 127.311, "o": 5.122, "z": 1064.098}, {"t": "CAMARA", "n": "94", "s": 127.114, "o": 4.816, "z": 1064.094}, {"t": "POSTE", "n": "95", "s": 128.326, "o": 3.844, "z": 1064.111}, {"t": "SOL B", "n": "96", "s": 128.109, "o": 3.5, "z": 1064.059}, {"t": "VEREDA", "n": "97", "s": 126.485, "o": 3.592, "z": 1064.077}, {"t": "VEREDA", "n": "98", "s": 126.609, "o": 6.448, "z": 1064.067}, {"t": "VEREDA", "n": "105", "s": 123.917, "o": 3.576, "z": 1064.064}, {"t": "SOL B", "n": "106", "s": 122.902, "o": 3.5, "z": 1064.03}, {"t": "TENSOR", "n": "107", "s": 123.326, "o": 4.166, "z": 1064.073}, {"t": "VEREDA", "n": "112", "s": 120.069, "o": 3.632, "z": 1064.241}, {"t": "POSTE", "n": "113", "s": 117.429, "o": 3.89, "z": 1064.205}, {"t": "SOL B", "n": "114", "s": 114.926, "o": 3.5, "z": 1064.007}, {"t": "RADIER", "n": "115", "s": 114.926, "o": 3.611, "z": 1064.099}, {"t": "VEREDA", "n": "116", "s": 114.889, "o": 6.439, "z": 1064.069}, {"t": "SOL B", "n": "117", "s": 108.883, "o": 3.5, "z": 1064.047}, {"t": "VEREDA", "n": "120", "s": 98.981, "o": 3.537, "z": 1064.058}, {"t": "RADIER", "n": "121", "s": 103.608, "o": 3.672, "z": 1064.215}, {"t": "ARBOL", "n": "123", "s": 102.962, "o": 4.108, "z": 1064.144}, {"t": "RADIER", "n": "128", "s": 98.566, "o": 3.602, "z": 1064.04}, {"t": "SOL B", "n": "129", "s": 92.536, "o": 3.5, "z": 1064.064}, {"t": "RADIER", "n": "130", "s": 92.536, "o": 3.592, "z": 1064.089}, {"t": "SOL B", "n": "131", "s": 82.786, "o": 3.5, "z": 1064.083}, {"t": "SOL B", "n": "132", "s": 71.573, "o": 3.5, "z": 1064.075}, {"t": "SENAL", "n": "133", "s": 71.548, "o": 4.281, "z": 1064.32}, {"t": "RADIER", "n": "134", "s": 71.951, "o": 3.652, "z": 1064.093}, {"t": "SOL B", "n": "138", "s": 66.357, "o": 3.5, "z": 1064.027}, {"t": "RADIER", "n": "139", "s": 66.355, "o": 3.618, "z": 1064.022}, {"t": "RADIER", "n": "141", "s": 61.426, "o": 3.67, "z": 1064.069}, {"t": "SOL B", "n": "145", "s": 57.296, "o": 3.5, "z": 1064.104}, {"t": "RADIER", "n": "147", "s": 50.325, "o": 5.439, "z": 1064.098}, {"t": "SOL B", "n": "148", "s": 44.735, "o": 3.498, "z": 1064.068}, {"t": "SOL B", "n": "149", "s": 44.735, "o": 3.5, "z": 1064.078}, {"t": "RADIER", "n": "150", "s": 45.281, "o": 3.62, "z": 1064.071}, {"t": "VEREDA", "n": "151", "s": 36.066, "o": 6.447, "z": 1064.268}, {"t": "SOL B", "n": "153", "s": 34.497, "o": 3.5, "z": 1064.093}, {"t": "RADIER", "n": "154", "s": 34.226, "o": 3.605, "z": 1064.098}, {"t": "CAMARA", "n": "155", "s": 71.157, "o": 0.91, "z": 1064.059}, {"t": "CAMARA", "n": "156", "s": 71.164, "o": 0.906, "z": 1064.052}, {"t": "CAMARA", "n": "157", "s": 71.131, "o": 1.244, "z": 1064.049}, {"t": "MUROS", "n": "169", "s": 65.941, "o": -6.356, "z": 1064.149}, {"t": "MUROS", "n": "170", "s": 65.93, "o": -6.41, "z": 1064.05}, {"t": "MUROS", "n": "171", "s": 38.043, "o": -5.649, "z": 1064.17}, {"t": "MUROS", "n": "172", "s": 2.032, "o": -5.554, "z": 1064.049}, {"t": "BC", "n": "178", "s": 0.271, "o": -5.707, "z": 1064.039}, {"t": "BC", "n": "179", "s": 0.465, "o": -5.173, "z": 1064.055}, {"t": "BC", "n": "180", "s": 0.717, "o": -4.801, "z": 1064.044}, {"t": "BC", "n": "181", "s": 1.455, "o": -4.155, "z": 1064.049}, {"t": "BC", "n": "182", "s": 1.891, "o": -3.916, "z": 1064.055}, {"t": "BC", "n": "183", "s": 3.051, "o": -3.642, "z": 1064.035}, {"t": "BC", "n": "184", "s": 7.912, "o": -3.623, "z": 1064.047}, {"t": "SOLERA", "n": "185", "s": 7.918, "o": -3.752, "z": 1064.153}, {"t": "VEREDA", "n": "186", "s": 7.982, "o": -5.287, "z": 1064.151}, {"t": "SOL B", "n": "187", "s": 28.158, "o": 3.48, "z": 1064.083}, {"t": "POSTE", "n": "188", "s": 27.76, "o": 3.977, "z": 1064.142}, {"t": "VEREDA", "n": "189", "s": 29.281, "o": 6.448, "z": 1064.084}, {"t": "RADIER", "n": "190", "s": 29.285, "o": 6.45, "z": 1064.086}, {"t": "RADIER", "n": "194", "s": 24.528, "o": 6.459, "z": 1064.205}, {"t": "RADIER", "n": "195", "s": 24.447, "o": 3.631, "z": 1064.197}, {"t": "TENSOR", "n": "196", "s": 22.505, "o": 4.197, "z": 1064.19}, {"t": "SOL B", "n": "199", "s": 20.05, "o": 3.468, "z": 1064.026}, {"t": "SOL B", "n": "200", "s": 11.955, "o": 3.471, "z": 1064.053}, {"t": "POSTE", "n": "201", "s": 11.017, "o": 3.915, "z": 1064.192}, {"t": "BC", "n": "202", "s": 2.7, "o": 3.59, "z": 1064.058}, {"t": "SOL B", "n": "203", "s": 4.824, "o": 3.551, "z": 1064.055}, {"t": "SOL B", "n": "204", "s": 3.103, "o": 3.507, "z": 1064.087}, {"t": "SOL B", "n": "205", "s": 1.795, "o": 3.726, "z": 1064.064}, {"t": "BC", "n": "206", "s": 1.302, "o": 3.983, "z": 1064.085}, {"t": "BC", "n": "207", "s": 1.311, "o": 3.968, "z": 1064.078}, {"t": "BC", "n": "208", "s": 0.615, "o": 4.574, "z": 1064.099}, {"t": "SOL B", "n": "209", "s": 0.322, "o": 5.007, "z": 1064.092}, {"t": "SOL B", "n": "210", "s": 0.0, "o": 6.051, "z": 1064.075}, {"t": "ARBOL", "n": "224", "s": 6.925, "o": 4.766, "z": 1064.132}, {"t": "JAR", "n": "225", "s": 6.296, "o": 6.283, "z": 1064.212}, {"t": "JAR", "n": "226", "s": 7.428, "o": 6.359, "z": 1064.158}, {"t": "VEREDA", "n": "227", "s": 7.48, "o": 6.329, "z": 1064.129}, {"t": "VEREDA", "n": "228", "s": 7.667, "o": 3.652, "z": 1064.178}, {"t": "JAR", "n": "229", "s": 7.564, "o": 3.645, "z": 1064.181}, {"t": "JAR", "n": "230", "s": 6.46, "o": 3.593, "z": 1064.177}], "camaras": [{"s": 8.83, "o": 0.61, "z": 1064.072, "nombre": "C1"}, {"s": 71.16, "o": 0.91, "z": 1064.053, "nombre": "C2"}], "lomos": [{"s0": 52.25, "s1": 53.29}], "rasante": null};
+const $ = id => document.getElementById(id);
+const esc = v => String(v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const f3 = v => v.toFixed(3), f2 = v => v.toFixed(2);
+const B = D.bombeo, SA = D.semiancho, LARGO = D.largo;
+const KEY = "perfil_editor_" + D.nombre;
+$("tit").textContent = "Perfil longitudinal — " + D.nombre;
+$("subt").textContent = `Largo ${f2(LARGO)} m · bombeo ${(B*100).toFixed(1)} % · semiancho ${f2(SA)} m`;
+
+let piv = [], sel = -1, hist = [], fut = [];
+const snap = () => JSON.stringify(piv);
+function push(){ hist.push(snap()); if(hist.length>200) hist.shift(); fut = []; }
+function undo(){ if(!hist.length) return; fut.push(snap()); piv = JSON.parse(hist.pop()); sel = Math.min(sel, piv.length-1); all(); }
+function redo(){ if(!fut.length) return; hist.push(snap()); piv = JSON.parse(fut.pop()); all(); }
+
+/* ---- rasante: tangentes + curvas verticales parabólicas (igual que geometria/rasante.py) ---- */
+function grades(){ const g=[]; for(let i=0;i<piv.length-1;i++) g.push((piv[i+1].z-piv[i].z)/(piv[i+1].s-piv[i].s)); return g; }
+function cota(s){
+  const g = grades(); let i = 0;
+  while(i < piv.length-2 && s >= piv[i+1].s) i++;
+  let z = piv[i].z + g[i]*(s-piv[i].s);
+  for(let k=1;k<piv.length-1;k++){
+    const L = piv[k].L; if(!(L>0)) continue;
+    const a = s-(piv[k].s-L/2);
+    if(a>=0 && a<=L){ z = piv[k].z + g[k-1]*(a-L/2) + (g[k]-g[k-1])*a*a/(2*L); break; }
+  }
+  return z;
+}
+const enOffset = (s,o) => cota(s) - B*Math.abs(o);
+
+/* ---- propuesta: mínimos cuadrados con PIV equiespaciados ---- */
+function solve(A,b){ // A n×n simétrica
+  const n=b.length, M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){ let p=c; for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    [M[c],M[p]]=[M[p],M[c]]; for(let r=0;r<n;r++){ if(r===c) continue; const f=M[r][c]/M[c][c]; for(let k=c;k<=n;k++) M[r][k]-=f*M[c][k]; } }
+  return M.map((r,i)=>r[n]/r[i]);
+}
+function objetivos(){
+  const rev = (+$("revel").value||0)/100, wS=+$("pSol").value||0, wT=+$("pTapa").value||0, R=[];
+  for(const p of D.puntos){
+    if(p.s<0||p.s>LARGO) continue;
+    const borde = Math.abs(Math.abs(p.o)-SA) < 0.3;
+    if(p.t==="BC" && borde) R.push([p.s, p.z + B*Math.abs(p.o), 1]);
+    else if(p.t==="SOL B" && borde && wS>0) R.push([p.s, p.z - rev + B*Math.abs(p.o), wS]);
+  }
+  if(wT>0) for(const c of D.camaras) R.push([c.s, c.z + B*Math.abs(c.o), wT]);
+  return R;
+}
+function proponer(){
+  const n = Math.max(2, Math.min(12, Math.round(+$("nPiv").value||3)));
+  const S = Array.from({length:n},(_,i)=>LARGO*i/(n-1));
+  const R = objetivos();
+  if(R.length<2){ $("mPiv").textContent="No hay puntos de borde suficientes para proponer."; return; }
+  const A = S.map(()=>S.map(()=>0)), b = S.map(()=>0);
+  const add = (row, val) => { for(let i=0;i<n;i++){ if(!row[i]) continue; b[i]+=row[i]*val; for(let j=0;j<n;j++) A[i][j]+=row[i]*row[j]; } };
+  for(const [s,z,w] of R){ let i=Math.min(n-2, Math.max(0, S.findIndex((q,k)=>s>=q && s<=S[k+1]))); const t=(s-S[i])/(S[i+1]-S[i]);
+    const row=S.map(()=>0); row[i]=(1-t)*Math.sqrt(w); row[i+1]=t*Math.sqrt(w); add(row, z*Math.sqrt(w)); }
+  const lam = 0.002*R.length; // suavidad: penaliza cambios de pendiente
+  for(let k=1;k<n-1;k++){ const h1=S[k]-S[k-1], h2=S[k+1]-S[k], row=S.map(()=>0);
+    row[k-1]=lam/h1; row[k]=-lam*(1/h1+1/h2); row[k+1]=lam/h2; add(row,0); }
+  for(let i=0;i<n;i++) A[i][i]+=1e-9;
+  const z = solve(A,b), Lm = +$("lMax").value||40;
+  push();
+  piv = S.map((s,i)=>({s:+s.toFixed(3), z:+z[i].toFixed(4), L:(i>0&&i<n-1)?+Math.min(Lm,0.8*Math.min(S[i]-S[i-1],S[i+1]-S[i])).toFixed(1):0}));
+  sel = -1; all();
+  $("mPiv").textContent = `Propuesta con ${n} PIV a partir de ${R.length} puntos. Revísala y ajústala a mano.`;
+}
+
+/* ---- dibujo ---- */
+const svg = $("svg"); let X, Y, Xi, Yi, geo = {};
+function draw(){
+  const W = svg.clientWidth, H = svg.clientHeight; if(!W||!H) return;
+  const gH = Math.min(150, H*0.3), mL = 92, mR = 16, mT = 14, pH = H - gH - mT - 26;
+  const zs = D.terreno.map(t=>t[1]).concat(D.puntos.filter(p=>p.s>=0&&p.s<=LARGO&&Math.abs(p.o)<SA+1).map(p=>p.z), piv.map(p=>p.z));
+  let z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const ex = +$("exag").value;
+  const sx = (W-mL-mR)/LARGO;
+  if(ex>0){ const zc=(z0+z1)/2, half=pH/(sx*ex)/2; z0=zc-half; z1=zc+half; } else { const pad=(z1-z0)*0.15+0.01; z0-=pad; z1+=pad; }
+  const sy = pH/(z1-z0);
+  X = s => mL + s*sx; Y = z => mT + (z1-z)*sy; Xi = x => (x-mL)/sx; Yi = y => z1-(y-mT)/sy;
+  geo = {W,H,mL,mR,mT,pH,gH};
+  let o = "";
+  // grilla
+  const stepZ = [0.005,0.01,0.02,0.05,0.1,0.2,0.5,1].find(v=>(z1-z0)/v<=10) || 1;
+  for(let z=Math.ceil(z0/stepZ)*stepZ; z<=z1; z+=stepZ) o+=`<line x1="${mL}" x2="${W-mR}" y1="${Y(z)}" y2="${Y(z)}" stroke="var(--rule)"/><text x="${mL-6}" y="${Y(z)+4}" text-anchor="end" font-size="11" fill="var(--mut)">${z.toFixed(stepZ<0.01?3:2)}</text>`;
+  for(let s=0; s<=LARGO+1e-6; s+=10) o+=`<line x1="${X(s)}" x2="${X(s)}" y1="${mT}" y2="${mT+pH}" stroke="var(--rule)"/>`;
+  o+=`<text x="${W-mR}" y="${mT+12}" text-anchor="end" font-size="11" fill="var(--mut)">Exag. vertical ×${Math.round(sy/sx)}</text>`;
+  // lomos de toro
+  for(const l of D.lomos) o+=`<rect x="${X(l.s0)}" y="${mT}" width="${Math.max(2,X(l.s1)-X(l.s0))}" height="${pH}" fill="var(--acc)" opacity=".25"/><text x="${X((l.s0+l.s1)/2)}" y="${mT+pH-4}" text-anchor="middle" font-size="11" fill="var(--mut)">lomo toro</text>`;
+  // terreno en eje
+  o+=`<polyline fill="none" stroke="var(--ter)" stroke-width="1.2" points="${D.terreno.map(t=>X(t[0])+","+Y(t[1])).join(" ")}"/>`;
+  if(piv.length>=2){
+    // tangentes
+    o+=`<polyline fill="none" stroke="var(--ras)" stroke-dasharray="4 4" stroke-width="1" opacity=".6" points="${piv.map(p=>X(p.s)+","+Y(p.z)).join(" ")}"/>`;
+    // rasante eje y borde
+    const ss=[]; for(let s=0;s<=LARGO;s+=LARGO/600) ss.push(s);
+    o+=`<polyline fill="none" stroke="var(--bor)" stroke-dasharray="6 3" stroke-width="1.2" points="${ss.map(s=>X(s)+","+Y(cota(s)-B*SA)).join(" ")}"/>`;
+    o+=`<polyline fill="none" stroke="var(--ras)" stroke-width="2.4" points="${ss.map(s=>X(s)+","+Y(cota(s))).join(" ")}"/>`;
+    // pendientes
+    const g = grades();
+    for(let i=0;i<g.length;i++){ const sm=(piv[i].s+piv[i+1].s)/2; o+=`<text x="${X(sm)}" y="${Y(cota(sm))-8}" text-anchor="middle" font-size="12" fill="var(--ras)">${(g[i]*100).toFixed(2)} %</text>`; }
+  }
+  // puntos
+  for(const p of D.puntos){
+    if(p.s<-1||p.s>LARGO+1||Math.abs(Math.abs(p.o)-SA)>0.6&&p.t!=="LTORO") continue;
+    const x=X(p.s), y=Y(p.z), t=`<title>${esc(p.t)} ${esc(p.n)} · Dm ${f2(p.s)} · off ${f2(p.o)} · z ${f3(p.z)}</title>`;
+    if(p.t==="BC") o+=`<path d="M${x},${y-5} l5,9 h-10z" fill="var(--bor)">${t}</path>`;
+    else if(p.t==="SOL B"||p.t==="SOLERA") o+=`<rect x="${x-4}" y="${y-4}" width="8" height="8" fill="none" stroke="var(--bor)" stroke-width="1.5">${t}</rect>`;
+    else if(p.t==="LTORO") o+=`<circle cx="${x}" cy="${y}" r="3" fill="var(--mut)">${t}</circle>`;
+  }
+  for(const c of D.camaras){
+    const x=X(c.s), y=Y(c.z);
+    o+=`<circle cx="${x}" cy="${y}" r="6" fill="var(--acc)" stroke="var(--ink)" stroke-width="1.5"><title>Cámara ${esc(c.nombre)} · Dm ${f2(c.s)} · off ${f2(c.o)} · tapa ${f3(c.z)}</title></circle>`;
+    if(piv.length>=2){ const zr=enOffset(c.s,c.o), d=(zr-c.z)*100;
+      o+=`<line x1="${x}" x2="${x}" y1="${y}" y2="${Y(zr)}" stroke="var(--ink)" stroke-width="1"/><line x1="${x-6}" x2="${x+6}" y1="${Y(zr)}" y2="${Y(zr)}" stroke="var(--ink)" stroke-width="2"/>`;
+      o+=`<text x="${x+9}" y="${y+16}" font-size="12" fill="${Math.abs(d)<=1?"var(--ok)":"var(--bad)"}">tapa ${d>=0?"+":""}${d.toFixed(1)} cm</text>`; }
+  }
+  // PIV
+  piv.forEach((p,i)=>{ o+=`<g data-i="${i}" style="cursor:grab"><circle cx="${X(p.s)}" cy="${Y(p.z)}" r="14" fill="transparent"/><circle cx="${X(p.s)}" cy="${Y(p.z)}" r="7" fill="${i===sel?"var(--acc)":"var(--bg)"}" stroke="var(--ras)" stroke-width="2.2"/></g>`;
+    o+=`<text x="${X(p.s)}" y="${Y(p.z)+22}" text-anchor="middle" font-size="11" fill="var(--ras)">PIV${i}${p.L>0?" · L="+p.L:""}</text>`; });
+  // guitarra
+  const gy = mT+pH+26, rows=["Dm","Terreno eje","Rasante eje","Rasante borde","Dif. eje cm"], rh=gH/rows.length;
+  rows.forEach((r,k)=>{ o+=`<line x1="4" x2="${W-mR}" y1="${gy+k*rh}" y2="${gy+k*rh}" stroke="var(--rule)"/><text x="6" y="${gy+k*rh+rh*0.65}" font-size="11" fill="var(--mut)">${r}</text>`; });
+  o+=`<line x1="4" x2="${W-mR}" y1="${gy+gH}" y2="${gy+gH}" stroke="var(--rule)"/>`;
+  const every = sx*10 < 44 ? 20 : 10;
+  for(let s=0;s<=LARGO+1e-6;s+=every){ const zt=terr(s), x=X(s);
+    const vals=[f2(s), isNaN(zt)?"—":f3(zt)];
+    if(piv.length>=2){ const zr=cota(s); vals.push(f3(zr), f3(zr-B*SA), isNaN(zt)?"—":((zr-zt)*100).toFixed(1)); }
+    vals.forEach((v,k)=>o+=`<text transform="translate(${x+3},${gy+k*rh+rh*0.7}) rotate(${sx*every<70?-0:0})" font-size="10" fill="var(--ink)">${v}</text>`);
+    o+=`<line x1="${x}" x2="${x}" y1="${gy}" y2="${gy+gH}" stroke="var(--rule)"/>`; }
+  svg.innerHTML = o;
+}
+function terr(s){ const T=D.terreno; if(s<T[0][0]||s>T[T.length-1][0]) return NaN; let i=0; while(i<T.length-2&&s>T[i+1][0]) i++;
+  const t=(s-T[i][0])/(T[i+1][0]-T[i][0]); return T[i][1]+t*(T[i+1][1]-T[i][1]); }
+
+/* ---- tablas ---- */
+function tablas(){
+  const g = grades();
+  let h = `<tr><th>PIV</th><th>Dm</th><th>Cota</th><th>Pend. entrada</th><th>Pend. salida</th><th>L curva</th><th></th></tr>`;
+  let warn = [];
+  piv.forEach((p,i)=>{
+    const ext = i===0||i===piv.length-1;
+    h += `<tr class="${i===sel?"sel":""}" data-i="${i}"><td>PIV${i}</td>
+      <td><input type="number" step="0.5" data-k="s" data-i="${i}" value="${p.s.toFixed(2)}" ${ext?"disabled":""}></td>
+      <td><input type="number" step="0.001" data-k="z" data-i="${i}" value="${p.z.toFixed(3)}"></td>
+      <td>${i>0?(g[i-1]*100).toFixed(3)+" %":""}</td><td>${i<g.length?(g[i]*100).toFixed(3)+" %":""}</td>
+      <td>${ext?"":`<input type="number" step="1" data-k="L" data-i="${i}" value="${p.L}">`}</td>
+      <td>${ext?"":`<button data-del="${i}" title="Borrar PIV">✕</button>`}</td></tr>`;
+    if(!ext){ const a=piv[i].s-piv[i].L/2-(i>1?piv[i-1].s+piv[i-1].L/2:piv[0].s), b=(i<piv.length-2?piv[i+1].s-piv[i+1].L/2:piv[piv.length-1].s)-(piv[i].s+piv[i].L/2);
+      if(a<-1e-6||b<-1e-6) warn.push(`La curva del PIV${i} se traslapa con la vecina: acorta L.`); }
+  });
+  $("tPiv").innerHTML = h;
+  if(warn.length) { $("mPiv").innerHTML = `<span class="badc">${warn.map(esc).join(" ")}</span>`; }
+  // chequeos
+  let c = `<tr><th>Elemento</th><th>Dm</th><th>Offset</th><th>Cota pto</th><th>Rasante</th><th>Dif. cm</th></tr>`;
+  if(piv.length>=2){
+    for(const k of D.camaras){ const zr=enOffset(k.s,k.o), d=(zr-k.z)*100;
+      c+=`<tr><td>Tapa ${esc(k.nombre)}</td><td>${f2(k.s)}</td><td>${f2(k.o)}</td><td>${f3(k.z)}</td><td>${f3(zr)}</td><td class="${Math.abs(d)<=1?"okc":"badc"}">${d>=0?"+":""}${d.toFixed(1)}</td></tr>`; }
+    for(const t of ["BC","SOL B"]){ const ds=D.puntos.filter(p=>p.t===t&&p.s>=0&&p.s<=LARGO&&Math.abs(Math.abs(p.o)-SA)<0.3).map(p=>(enOffset(p.s,p.o)-p.z)*100);
+      if(!ds.length) continue; const m=ds.reduce((a,b)=>a+b,0)/ds.length;
+      c+=`<tr><td>${t} (${ds.length} ptos)</td><td colspan="3" style="text-align:left">promedio · mín · máx</td><td></td><td>${m.toFixed(1)} · ${Math.min(...ds).toFixed(1)} · ${Math.max(...ds).toFixed(1)}</td></tr>`; }
+    const gg=g.map(Math.abs);
+    c+=`<tr><td>Pendiente long.</td><td colspan="4" style="text-align:left">mínima · máxima</td><td>${(Math.min(...gg)*100).toFixed(2)} · ${(Math.max(...gg)*100).toFixed(2)} %</td></tr>`;
+  }
+  $("tChk").innerHTML = c;
+  $("json").value = JSON.stringify({proyecto:D.nombre, tipo:"rasante_eje", bombeo:B, semiancho:SA, piv:piv.map(p=>({dm:+p.s.toFixed(3),cota:+p.z.toFixed(4),L:p.L}))}, null, 1);
+  try{ localStorage.setItem(KEY, snap()); }catch(e){}
+}
+function all(){ draw(); tablas(); }
+
+/* ---- interacción ---- */
+let drag = null;
+svg.addEventListener("pointerdown", e=>{
+  const g = e.target.closest("g[data-i]"); if(!g) return;
+  const i=+g.dataset.i; sel=i; push(); drag={i}; svg.setPointerCapture(e.pointerId); all(); });
+svg.addEventListener("pointermove", e=>{
+  if(!drag) return; const r=svg.getBoundingClientRect(), p=piv[drag.i];
+  p.z = +Yi(e.clientY-r.top).toFixed(4);
+  if(!$("soloZ").checked && drag.i>0 && drag.i<piv.length-1){ const s=Xi(e.clientX-r.left); p.s=+Math.max(piv[drag.i-1].s+1, Math.min(piv[drag.i+1].s-1, s)).toFixed(2); }
+  all(); });
+svg.addEventListener("pointerup", ()=>{ drag=null; });
+svg.addEventListener("dblclick", e=>{
+  if(piv.length<2) return; const r=svg.getBoundingClientRect(), s=Xi(e.clientX-r.left);
+  if(s<=0.5||s>=LARGO-0.5) return; push();
+  const k=piv.findIndex(p=>p.s>s); piv.splice(k,0,{s:+s.toFixed(2), z:+cota(s).toFixed(4), L:10}); sel=k; all(); });
+$("tPiv").addEventListener("change", e=>{
+  const t=e.target; if(!t.dataset.k) return; const i=+t.dataset.i, v=+t.value; if(!isFinite(v)) return; push();
+  if(t.dataset.k==="s") piv[i].s=Math.max(piv[i-1].s+0.5, Math.min(piv[i+1].s-0.5, v)); else piv[i][t.dataset.k]=Math.max(t.dataset.k==="L"?0:-Infinity, v);
+  all(); });
+$("tPiv").addEventListener("click", e=>{
+  const d=e.target.closest("[data-del]"); if(d){ push(); piv.splice(+d.dataset.del,1); sel=-1; all(); return; }
+  const tr=e.target.closest("tr[data-i]"); if(tr && e.target.tagName!=="INPUT"){ sel=+tr.dataset.i; all(); } });
+document.addEventListener("keydown", e=>{
+  if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="y"){ e.preventDefault(); redo(); return; }
+  if(sel<0) return;
+  if(e.key==="Delete"&&sel>0&&sel<piv.length-1){ push(); piv.splice(sel,1); sel=-1; all(); }
+  if(e.key==="ArrowUp"||e.key==="ArrowDown"){ e.preventDefault(); push(); piv[sel].z=+(piv[sel].z+(e.key==="ArrowUp"?1:-1)*(e.shiftKey?0.01:0.001)).toFixed(4); all(); }
+});
+$("bProp").onclick = proponer; $("bUndo").onclick = undo; $("bRedo").onclick = redo;
+["exag"].forEach(id=>$(id).addEventListener("change", draw));
+$("bCopy").onclick = async ()=>{ try{ await navigator.clipboard.writeText($("json").value); $("mJson").textContent="JSON copiado."; }
+  catch(e){ $("json").select(); $("mJson").textContent="Selecciona el texto y cópialo con Ctrl+C."; } };
+$("bDesc").onclick = ()=>{ try{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([$("json").value],{type:"application/json"}));
+  a.download="rasante.json"; document.body.appendChild(a); a.click(); a.remove(); $("mJson").textContent="Si no se descargó (vista web), usa Copiar JSON."; }catch(e){ $("mJson").textContent="Descarga no disponible aquí: usa Copiar JSON."; } };
+function cargar(txt){ try{ const j=JSON.parse(txt); if(!Array.isArray(j.piv)||j.piv.length<2) throw 0; push();
+  piv=j.piv.map(p=>({s:+p.dm, z:+p.cota, L:+p.L||0})).sort((a,b)=>a.s-b.s); sel=-1; all(); $("mJson").textContent="Rasante cargada."; }
+  catch(e){ $("mJson").textContent="El texto no es una rasante válida."; } }
+$("bLoad").onclick = ()=>cargar($("json").value);
+$("fIn").onchange = e=>{ const f=e.target.files[0]; if(f) f.text().then(cargar); };
+
+// inicio: guardado del navegador > rasante del archivo > propuesta
+let ini=null; try{ ini=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+if(Array.isArray(ini)&&ini.length>=2) piv=ini;
+else if(D.rasante&&D.rasante.piv) piv=D.rasante.piv.map(p=>({s:+p.dm,z:+p.cota,L:+p.L||0}));
+const ro = new ResizeObserver(draw); ro.observe(svg);
+if(piv.length<2) proponer(); else all();
+}
+</script>
+</body>
+</html>
